@@ -2,7 +2,7 @@ import unittest
 from pyspark.sql import Row
 import local_data_handler
 from test_3_solution import associate_order_with_contact_address
-from pyspark.sql.functions import explode, col, coalesce, lit, concat_ws
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType
 
 
 class TestAssociateOrderWithContactFullName(unittest.TestCase):
@@ -72,7 +72,21 @@ class TestAssociateOrderWithContactFullName(unittest.TestCase):
             Row(order_id="O1", contact_data=[{"city": None, "cp": None}]),
             Row(order_id="O2", contact_data=[{}]),
         ]
-        orders_df = self.spark.createDataFrame(data)
+        orders_df = self.spark.createDataFrame(data, schema=StructType(
+                [
+                    StructField("order_id", StringType(), True),
+                    StructField("contact_data", ArrayType(
+                        StructType(
+                            [
+                                StructField("contact_name", StringType(), True),
+                                StructField("contact_surname", StringType(), True),
+                                StructField("city", StringType(), True),
+                                StructField("cp", StringType(), True),
+                            ]
+                        )
+                    ), True),
+                ]
+            ))
         result_df = associate_order_with_contact_address(orders_df)
 
         # Expected output
