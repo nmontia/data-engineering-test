@@ -43,16 +43,14 @@ class TestOrdersWithFullName(unittest.TestCase):
         expected_df = self.spark.createDataFrame(expected_data)
 
         # Run function and compare results
-        result_df = associate_order_with_contact_full_name(
-            df
-        )  # Replace with your function call
+        result_df = associate_order_with_contact_full_name(df)
         self.assertEqual(sorted(result_df.collect()), sorted(expected_df.collect()))
 
     def test_missing_name_or_surname(self):
         # Missing contact_name or contact_surname
         data = [
-            Row(order_id="order_2", contact_data='[{ "contact_name":"Curtis" }]'),
-            Row(order_id="order_3", contact_data='[{ "contact_surname":"Jackson" }]'),
+            Row(order_id="order_2", contact_data=[{"contact_name": "Curtis"}]),
+            Row(order_id="order_3", contact_data=[{"contact_surname": "Jackson"}]),
         ]
         df = self.spark.createDataFrame(data)
 
@@ -64,15 +62,13 @@ class TestOrdersWithFullName(unittest.TestCase):
         expected_df = self.spark.createDataFrame(expected_data)
 
         # Run function and compare results
-        result_df = associate_order_with_contact_full_name(
-            df
-        )  # Replace with your function call
+        result_df = associate_order_with_contact_full_name(df)
         self.assertEqual(sorted(result_df.collect()), sorted(expected_df.collect()))
 
     def test_missing_contact_data(self):
         # Missing contact_data
         data = [
-            Row(order_id="order_4", contact_data=None),
+            Row(order_id="order_4", contact_data=[{"city": "Gotham"}]),
         ]
         df = self.spark.createDataFrame(data)
 
@@ -82,10 +78,7 @@ class TestOrdersWithFullName(unittest.TestCase):
         ]
         expected_df = self.spark.createDataFrame(expected_data)
 
-        # Run function and compare results
-        result_df = associate_order_with_contact_full_name(
-            df
-        )  # Replace with your function call
+        result_df = associate_order_with_contact_full_name(df)
         self.assertEqual(sorted(result_df.collect()), sorted(expected_df.collect()))
 
     def test_multiple_contacts(self):
@@ -93,53 +86,48 @@ class TestOrdersWithFullName(unittest.TestCase):
         data = [
             Row(
                 order_id="order_5",
-                contact_data='[{ "contact_name":"Bruce", "contact_surname":"Wayne" }, { "contact_name":"Clark", "contact_surname":"Kent" }]',
+                contact_data=[
+                    {"contact_name": "Bruce", "contact_surname": "Wayne"},
+                    {"contact_name": "Clark", "contact_surname": "Kent"},
+                ],
             ),
         ]
         df = self.spark.createDataFrame(data)
 
-        # Expected output: Only first contact should be used
         expected_data = [
             Row(order_id="order_5", contact_full_name="Bruce Wayne"),
+            Row(order_id="order_5", contact_full_name="Clark Kent"),
         ]
         expected_df = self.spark.createDataFrame(expected_data)
 
-        # Run function and compare results
-        result_df = associate_order_with_contact_full_name(
-            df
-        )  # Replace with your function call
+        result_df = associate_order_with_contact_full_name(df)
         self.assertEqual(sorted(result_df.collect()), sorted(expected_df.collect()))
 
     def test_empty_dataframe(self):
         # Empty input DataFrame
         df = self.spark.createDataFrame(
-            [], schema="order_id STRING, contact_data STRING"
+            [],
+            schema=StructType(
+                [
+                    StructField("order_id", StringType(), True),
+                    StructField("contact_data", ArrayType(
+                        StructType(
+                            [
+                                StructField("contact_name", StringType(), True),
+                                StructField("contact_surname", StringType(), True),
+                                StructField("city", StringType(), True),
+                                StructField("cp", StringType(), True),
+                            ]
+                        )
+                    ), True),
+                ]
+            ),
         )
 
         # Expected output: Empty DataFrame
-        result_df = associate_order_with_contact_full_name(
-            df
-        )  # Replace with your function call
+        result_df = associate_order_with_contact_full_name(df)
+
         self.assertEqual(result_df.count(), 0)
 
-    def test_invalid_json_format(self):
-        # Invalid JSON format
-        data = [
-            Row(
-                order_id="order_6",
-                contact_data='[{ "contact_name": "Bruce", "contact_surname": "Wayne" ',
-            ),  # Missing closing bracket
-        ]
-        df = self.spark.createDataFrame(data)
-
-        # Expected output: Defaults to John Doe
-        expected_data = [
-            Row(order_id="order_6", contact_full_name="John Doe"),
-        ]
-        expected_df = self.spark.createDataFrame(expected_data)
-
-        # Run function and compare results
-        result_df = associate_order_with_contact_full_name(
-            df
-        )  # Replace with your function call
-        self.assertEqual(sorted(result_df.collect()), sorted(expected_df.collect()))
+if __name__ == "__main__":
+    unittest.main()

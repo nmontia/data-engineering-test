@@ -1,24 +1,25 @@
 import local_data_handler
 import data_validation_checks
-from pyspark.sql.functions import col, concat_ws, lit, explode, coalesce
+from pyspark.sql.functions import col, concat_ws, lit, explode_outer, when
 
 
 def associate_order_with_contact_full_name(orders_df):
     exploded_df = orders_df.withColumn(
         "exploded_contact_data",
-        explode(col("contact_data")),
+        explode_outer(col("contact_data")),
     )
 
     order_contact_name_df = exploded_df.withColumn(
         "contact_full_name",
-        coalesce(  # Handle missing or null values
+        when(
+            col("exploded_contact_data.contact_name").isNotNull()
+            & col("exploded_contact_data.contact_surname").isNotNull(),
             concat_ws(
                 " ",
                 col("exploded_contact_data.contact_name"),  # Explode contact_name
                 col("exploded_contact_data.contact_surname"),  # Explode contact_surname
             ),
-            lit("John Doe"),  # Use "John Doe" as a placeholder
-        ),
+        ).otherwise(lit("John Doe")),
     ).select("order_id", "contact_full_name")
 
     return order_contact_name_df
