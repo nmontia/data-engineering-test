@@ -2,6 +2,8 @@ import unittest
 import local_data_handler
 from test_1_solution import find_crate_type_distribution
 from pyspark.sql import Row
+import multiprocessing
+multiprocessing.set_start_method("spawn", force=True)
 
 class TestCrateTypeDistribution(unittest.TestCase):
     @classmethod
