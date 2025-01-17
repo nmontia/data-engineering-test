@@ -51,6 +51,6 @@ if __name__ == "__main__":
 
     local_data = local_data_handler.LocalDataHandler()
     orders_df = local_data.orders_df
-    invoicing_data_df = local_data.invocing_data_df
+    invoicing_data_df = local_data.invoicing_data_df
     sales_comission_df = generate_sales_comissions(orders_df, invoicing_data_df)
     sales_comission_df.show()

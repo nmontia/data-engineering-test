@@ -5,7 +5,7 @@ import warnings
 
 local_data = local_data_handler.LocalDataHandler()
 orders_df = local_data.orders_df
-invocing_data_df = local_data.invocing_data_df
+invoicing_data_df = local_data.invoicing_data_df
 
 
 def assert_with_warning(condition, message):

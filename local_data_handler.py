@@ -75,7 +75,7 @@ class LocalDataHandler:
         self._orders_df = new_value
 
     @property
-    def invocing_data_df(self):
+    def invoicing_data_df(self):
         # Only load invoicing_data_df if not already loaded
         if self._invoicing_data_df is None:
             print("Loading invoicing data json file into dataframe.")
@@ -118,7 +118,7 @@ class LocalDataHandler:
             )
             return self._invoicing_data_df
 
-    @invocing_data_df.setter
-    def invocing_data_df(self, new_value):
+    @invoicing_data_df.setter
+    def invoicing_data_df(self, new_value):
         print("Setting a new value for orders_df...")
-        self.invocing_data_df = new_value
+        self.invoicing_data_df = new_value
