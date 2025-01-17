@@ -1,7 +1,7 @@
 import local_data_handler
 from pyspark.sql.functions import col, concat_ws, lit, explode, coalesce
 
-def associate_order_with_contact_full_name(orders_df):
+def associate_order_with_contact_address(orders_df):
     exploded_cleaned_df = (
         orders_df.withColumn(
             "exploded_contact_data",
@@ -23,5 +23,5 @@ if __name__ == "__main__":
 
     local_data = local_data_handler.LocalDataHandler()
     orders_df = local_data.orders_df
-    df_2 = associate_order_with_contact_full_name(orders_df)
+    df_2 = associate_order_with_contact_address(orders_df)
     df_2.show()
