@@ -1,0 +1,32 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+
+# Poetry specific
+.poetry/
+
+# Logs and local files
+*.log
+*.env
+*.local
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Pytest cache
+.pytest_cache/
+.cache/
+
+# Distribution/build
+build/
+dist/
+*.egg-info/
