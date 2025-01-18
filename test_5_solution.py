@@ -55,11 +55,17 @@ def generate_salesowners_per_company(orders_df):
         explode(split(col("salesowners"), r",\s*")),  # Split on commas and trim spaces
     )
 
-    salesowners_per_company_df = exploded_df.groupBy("primary_company_id").agg(
+    salesowners_per_unique_company_df = exploded_df.groupBy(
+        "primary_company_id", "normalised_company_name"
+    ).agg(
         concat_ws(", ", sort_array(collect_set(col("sales_owner_individual")))).alias(
             "list_salesowners"
         )
     )
+
+    salesowners_per_company_df= updated_df.join(salesowners_per_unique_company_df, how="left", 
+                   on=salesowners_per_unique_company_df.normalised_company_name == updated_df.normalised_company_name
+                    ).select("company_id", "company_name", "list_salesowners").distinct()
 
     return salesowners_per_company_df
 

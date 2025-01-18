@@ -2,7 +2,7 @@ import unittest
 from pyspark.sql import Row
 import local_data_handler
 from test_5_solution import generate_salesowners_per_company
-from pyspark.sql.functions import explode, col, coalesce, lit, concat_ws
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType
 
 
 class TestGenerateSalesOwnersPerCompany(unittest.TestCase):
@@ -15,9 +15,11 @@ class TestGenerateSalesOwnersPerCompany(unittest.TestCase):
     def test_typical_input(self):
         # Test case with valid company and salesowners data
         data = [
-            Row(company_id="C1", company_name="Healthy Snacks Co", salesowners="Alice, Bob"),
-            Row(company_id="C2", company_name="Healthy Snacks c.o.", salesowners="Alice, Charlie"),
-            Row(company_id="C3", company_name="Healthy Snacks Ltd", salesowners="David"),
+            Row(company_id="C1", company_name="Healthy Snacks Co", salesowners="Alice Chan, Bob Borgov"),
+            Row(company_id="C2", company_name="Healthy Snacks Inc.", salesowners="Alice Chan, Charlie Aim"),
+            Row(company_id="C3", company_name="Healthy Snacking Co", salesowners="David Casas"),
+            Row(company_id="C4", company_name="Tropical Veg Inc", salesowners="Norberta Aisling, Eufrasia Torres"),
+            Row(company_id="C5", company_name="Seafood Supplier GmbH", salesowners="Fuencisla de la Torre, Norberta Aisling"),
         ]
         orders_df = self.spark.createDataFrame(data)
 
@@ -25,7 +27,11 @@ class TestGenerateSalesOwnersPerCompany(unittest.TestCase):
 
         # Expected output
         expected_data = [
-            Row(primary_company_id="C1", list_salesowners="Alice, Bob, Charlie, David"),
+            Row(company_id="C1", company_name="Healthy Snacks Co", list_salesowners="Alice Chan, Bob Borgov, Charlie Aim"),
+            Row(company_id="C2", company_name="Healthy Snacks Inc.", list_salesowners="Alice Chan, Bob Borgov, Charlie Aim"),
+            Row(company_id="C3", company_name="Healthy Snacking Co", list_salesowners="David Casas"),
+            Row(company_id="C4", company_name="Tropical Veg Inc", list_salesowners="Eufrasia Torres, Norberta Aisling"),
+            Row(company_id="C5", company_name="Seafood Supplier GmbH", list_salesowners="Fuencisla de la Torre, Norberta Aisling"),
         ]
         expected_df = self.spark.createDataFrame(expected_data)
 
@@ -34,8 +40,8 @@ class TestGenerateSalesOwnersPerCompany(unittest.TestCase):
     def test_multiple_ids_same_name(self):
         # Test case with multiple company IDs but the same normalized name
         data = [
-            Row(company_id="C1", company_name="Farm Fresh Co", salesowners="Eve"),
-            Row(company_id="C2", company_name="Farm Fresh Ltd", salesowners="Frank"),
+            Row(company_id="C1", company_name="Farm Fresh Co", salesowners="Eve Aslan"),
+            Row(company_id="C2", company_name="Farm Fresh Ltd", salesowners="Frank Zappa"),
         ]
         orders_df = self.spark.createDataFrame(data)
 
@@ -43,7 +49,43 @@ class TestGenerateSalesOwnersPerCompany(unittest.TestCase):
 
         # Expected output
         expected_data = [
-            Row(primary_company_id="C1", list_salesowners="Eve, Frank"),
+            Row(company_id="C1", company_name="Farm Fresh Co", salesowners="Eve Aslan, Frank Zappa"),
+            Row(company_id="C2", company_name="Farm Fresh Ltd", salesowners="Eve Aslan, Frank Zappa"),
+        ]
+        expected_df = self.spark.createDataFrame(expected_data)
+
+        self.assertEqual(sorted(result_df.collect()), sorted(expected_df.collect()))
+
+    def test_basic_uniqueness(self):
+        # Test that duplicate sales owners are removed
+        data = [
+            Row(company_id="C1", company_name="Company A", salesowners="Alice Chan, Bob Borgov, Alice Chan"),
+            Row(company_id="C1", company_name="Company A", salesowners="Bob Borgov, Charlie Aim"),
+        ]
+        orders_df = self.spark.createDataFrame(data)
+
+        result_df = generate_salesowners_per_company(orders_df)
+
+        # Expected output
+        expected_data = [
+            Row(company_id="C1", company_name="Company A", list_salesowners="Alice Chan, Bob Borgov, Charlie Aim"),
+        ]
+        expected_df = self.spark.createDataFrame(expected_data)
+
+        self.assertEqual(sorted(result_df.collect()), sorted(expected_df.collect()))
+    
+    def test_sorting(self):
+        # Test that sales owners are sorted alphabetically
+        data = [
+            Row(company_id="C1", company_name="Company A", salesowners="Charlie Aim, Alice Chan, Bob Borgov"),
+        ]
+        orders_df = self.spark.createDataFrame(data)
+
+        result_df = generate_salesowners_per_company(orders_df)
+
+        # Expected output
+        expected_data = [
+            Row(company_id="C1", company_name="Company A", list_salesowners="Alice Chan, Bob Borgov, Charlie Aim"),
         ]
         expected_df = self.spark.createDataFrame(expected_data)
 
@@ -54,15 +96,23 @@ class TestGenerateSalesOwnersPerCompany(unittest.TestCase):
         data = [
             Row(company_id="C1", company_name="Veggie Partners Ltd", salesowners=None),
         ]
-        orders_df = self.spark.createDataFrame(data)
+        orders_schema = StructType(
+                [
+                    StructField("company_id", StringType(), True),
+                    StructField("company_name", StringType(), True),                    
+                    StructField("salesowners", StringType(), True),
+                ]
+            )
+
+        orders_df = self.spark.createDataFrame(data, schema=orders_schema)
 
         result_df = generate_salesowners_per_company(orders_df)
 
         # Expected output
         expected_data = [
-            Row(primary_company_id="C1", list_salesowners=""),
+            Row(company_id="C1", company_name="Veggie Partners Ltd", list_salesowners=None),
         ]
-        expected_df = self.spark.createDataFrame(expected_data)
+        expected_df = self.spark.createDataFrame(expected_data, schema=orders_schema)
 
         self.assertEqual(sorted(result_df.collect()), sorted(expected_df.collect()))
 
@@ -78,8 +128,8 @@ class TestGenerateSalesOwnersPerCompany(unittest.TestCase):
     def test_duplicate_salesowners(self):
         # Test case with duplicate salesowners
         data = [
-            Row(company_id="C1", company_name="Organic Foods Ltd", salesowners="Alice, Alice, Bob"),
-            Row(company_id="C2", company_name="Organic Foods", salesowners="Bob, Charlie"),
+            Row(company_id="C1", company_name="Organic Foods Ltd", salesowners="Alice Chan, Alice Chan, Bob Borgov"),
+            Row(company_id="C2", company_name="Organic Foods", salesowners="Bob Borgov, Charlie Aim"),
         ]
         orders_df = self.spark.createDataFrame(data)
 
@@ -87,7 +137,8 @@ class TestGenerateSalesOwnersPerCompany(unittest.TestCase):
 
         # Expected output
         expected_data = [
-            Row(primary_company_id="C1", list_salesowners="Alice, Bob, Charlie"),
+            Row(company_id="C1", company_name="Organic Foods Ltd", list_salesowners="Alice Chan, Bob Borgov, Charlie Aim"),
+            Row(company_id="C2", company_name="Organic Foods", list_salesowners="Alice Chan, Bob Borgov, Charlie Aim"),
         ]
         expected_df = self.spark.createDataFrame(expected_data)
 
